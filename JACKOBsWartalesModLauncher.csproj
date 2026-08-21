@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>JACKOBsWartalesModLauncher</AssemblyName>
+    <RootNamespace>JACKOBsWartalesModLauncher</RootNamespace>
+    <Version>0.2.2</Version>
+    <Authors>JACKOBTHATSME</Authors>
+    <Description>Offline data-only Wartales mod launcher and patcher with a graphical interface.</Description>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+</Project>
