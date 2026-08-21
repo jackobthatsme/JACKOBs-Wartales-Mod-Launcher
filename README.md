@@ -118,6 +118,60 @@ For the eventual public release, prefer a normal framework-dependent publish fol
 - Friendly empty-state panel when no mods are installed
 - Polished button labels and spacing
 - Cleaner bottom status bar
+  # JACKOB's Wartales Mod Launcher
+
+Offline launcher for installing, updating and managing compatible **JACKOBTHATSME Wartales mods**.
+
+## Download
+
+Get the latest version from **Releases**:
+
+**JACKOB's Wartales Mod Launcher v0.2.3**
+
+## Features
+
+- Install compatible mod packages
+- Uninstall managed mods
+- Verify files
+- Restore vanilla files
+- Fully offline
+- No PowerShell
+- No downloads
+- No registry changes
+
+## Installation
+
+1. Download the latest `.exe` from **Releases**.
+2. Run the launcher.
+3. Make sure your Wartales folder is detected.
+4. Click **Install Mod** and select a compatible mod package.
+
+You can also drag and drop a compatible mod ZIP directly into the launcher.
+
+## Supported Mods
+
+- **Ain't Nobody Got Time for That**
+- **Jack of Two Trades**
+
+More mods will use the same launcher in the future.
+
+## Compatibility
+
+Only use mod packages specifically made for this launcher.
+
+Other mods modifying the same Wartales data may conflict.
+
+Game updates may require updated mod packages.
+
+## Source Code
+
+The full C#/.NET source code is available in this repository.
+
+## Feedback
+
+Feedback and bug reports are always welcome. They help me improve the launcher and future mods.
+
+— **JACKOBTHATSME**
 
 The patching/backend logic is unchanged from the tested v0.2.0 build.
 
