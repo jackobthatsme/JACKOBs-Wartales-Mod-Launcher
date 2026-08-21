@@ -1,3 +1,4 @@
+<img width="1058" height="752" alt="Zrzut ekranu 2026-08-21 092742" src="https://github.com/user-attachments/assets/d922939a-0ce8-4039-b49d-6cc0227a4721" />
 # JACKOB's Wartales Mod Launcher
 
 Simple offline launcher for installing and managing compatible Wartales mods by **JACKOBTHATSME**.
