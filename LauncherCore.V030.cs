@@ -160,9 +160,9 @@ internal static partial class LauncherCore
         CaptureOriginals(gameDir, state, package.Manifest);
 
         var old = state.InstalledMods.FirstOrDefault(x => x.Id.Equals(package.Manifest.Id, StringComparison.OrdinalIgnoreCase));
-        var storedName = MakeSafeFileName(package.Manifest.Id) + "-" + MakeSafeFileName(package.Manifest.Version) + ".zip";
+        var storedName = MakeSafeFileName(package.Manifest.Id) + "-" + MakeSafeFileName(package.Manifest.Version) + "-" + Guid.NewGuid().ToString("N") + ".zip";
         var storedFullPath = Path.Combine(stateDir, "packages", storedName);
-        File.Copy(packagePath, storedFullPath, overwrite: true);
+        File.Copy(packagePath, storedFullPath, overwrite: false);
 
         if (old is not null) state.InstalledMods.Remove(old);
         state.InstalledMods.Add(new InstalledModState
@@ -177,7 +177,7 @@ internal static partial class LauncherCore
         try
         {
             RebuildAndCommit(gameDir, state);
-            if (old is not null && !old.PackageFile.Equals(state.InstalledMods[^1].PackageFile, StringComparison.OrdinalIgnoreCase))
+            if (old is not null)
                 TryDelete(Path.Combine(stateDir, old.PackageFile.Replace('/', Path.DirectorySeparatorChar)));
         }
         catch
