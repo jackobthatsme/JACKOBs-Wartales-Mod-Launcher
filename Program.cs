@@ -7,6 +7,19 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
 
+        try
+        {
+            var gameDir = LauncherCore.FindKnownGameDirectory();
+            if (!string.IsNullOrWhiteSpace(gameDir))
+                LauncherCore.ReconcilePersistedState(gameDir);
+        }
+        catch
+        {
+            // Startup recovery is conservative and best-effort. If it cannot prove the
+            // current files match the captured baseline, normal launcher safety checks
+            // remain responsible for reporting the mismatch to the user.
+        }
+
         var form = new MainForm();
         try
         {
