@@ -1,6 +1,6 @@
 # JACKOB Wartales Mod Package Format v1
 
-A public mod is a normal ZIP. The v1 package format is intentionally extensible and remains backwards compatible with launcher v0.2.x packages.
+A public mod is a normal ZIP. Package format v1 remains backwards compatible with launcher v0.2.x packages while launcher v0.3.0 adds generic external-file operations.
 
 At the ZIP root:
 
@@ -32,15 +32,31 @@ README.txt
     {
       "type": "externalBinaryDelta",
       "target": "some-file.dat",
-      "source": "patches/some-file.delta.json"
+      "source": "patches/some-file.jbd"
     }
   ]
 }
 ```
 
-`minimumLauncherVersion` is optional. Packages that use the external-file operations introduced in launcher v0.3.0 should set it to `0.3.0` or newer.
+`minimumLauncherVersion` is optional. Packages using external-file operations introduced in launcher v0.3.0 should set it to `0.3.0` or newer.
 
-A mod may contain any number of operations and may modify both entries inside `res.pak` and ordinary files under the Wartales installation directory.
+A mod may contain any number of operations and may modify both entries inside `res.pak` and ordinary files under the selected Wartales installation directory.
+
+## Operation paths
+
+Operations inside `res.pak` use `entry`:
+
+- `cdbPatch`
+- `xmlMerge`
+- `replaceEntry`
+
+Operations outside `res.pak` use `target`:
+
+- `externalBinaryDelta`
+- `externalXmlMerge`
+- `externalReplaceFile`
+
+External targets are always relative to the selected game directory. Absolute paths, `.`/`..` traversal, empty path components and attempts to target `res.pak` through an external operation are rejected.
 
 ## Operations inside res.pak
 
@@ -67,13 +83,11 @@ Example:
 }
 ```
 
-`expected` is a compatibility check. If the current rebuild input does not contain the expected value, the launcher aborts before committing the rebuilt state.
+`expected` is a compatibility check. If the rebuild input does not contain the expected value, the launcher aborts before committing the rebuilt state.
 
 ### xmlMerge
 
-Semantically adds or replaces selected nodes in an XML entry inside `res.pak`. The package ships only the nodes it owns, not a complete vanilla XML file.
-
-Patch file format:
+Semantically adds or replaces selected nodes in an XML entry inside `res.pak`.
 
 ```json
 {
@@ -100,52 +114,88 @@ Replaces one existing `res.pak` entry with package-owned bytes.
 }
 ```
 
-## External-file operations (launcher v0.3.0+)
+## External-file rebuild model
 
-External targets are always relative to the selected Wartales installation directory. Absolute paths, `..` traversal, empty path components, and attempts to target `res.pak` through an external operation are rejected.
-
-The launcher captures a clean baseline for every managed external target. Rebuild order is:
+The launcher captures a clean baseline for every managed external target. Rebuild order is deterministic:
 
 ```text
 clean baseline
 -> Mod A
 -> Mod B
 -> Mod C
--> final files
+-> final file
 ```
 
-Disabling Mod B rebuilds the result as:
+Disabling Mod B rebuilds the target as:
 
 ```text
 clean baseline
 -> Mod A
 -> Mod C
--> final files
+-> final file
 ```
 
-This is the same model used for managed `res.pak` entries. `Restore Vanilla` restores all launcher-managed baselines, including external files.
+The launcher does not restore an old copy owned by one mod. `Restore Vanilla` restores all launcher-managed baselines, including external files.
 
-### externalBinaryDelta
+## externalBinaryDelta
 
-Applies a small, fixed-length binary delta to any file under the game directory.
-
-Manifest operation:
+Applies a guarded binary transformation to any ordinary file under the game directory.
 
 ```json
 {
   "type": "externalBinaryDelta",
   "target": "some-file.dat",
-  "source": "patches/some-file.delta.json"
+  "source": "patches/some-file.jbd",
+  "expectedSha256": "optional duplicate of the delta baseline SHA-256",
+  "resultingSha256": "optional duplicate of the standalone result SHA-256"
 }
 ```
 
-Delta format:
+Launcher v0.3.0 supports two binary-delta encodings.
+
+### JACKOBBD1 — variable-length COPY/ADD delta
+
+`JACKOBBD1` is intended for compact patches where the resulting file may be longer or shorter than vanilla. It does not distribute the complete target file.
+
+Binary layout, little-endian integers:
+
+```text
+ASCII[9]  "JACKOBBD1"
+byte[32]  SHA-256 of the clean baseline
+byte[32]  SHA-256 of the standalone patched result
+uint64    clean baseline size
+uint64    standalone result size
+uint32    segment count
+segments...
+```
+
+Segment types:
+
+```text
+0x00 COPY
+    uint64 baselineOffset
+    uint32 length
+
+0x01 ADD
+    uint32 length
+    byte[length] literalData
+```
+
+A delta result is reconstructed only from verified baseline ranges (`COPY`) and package-owned literal data (`ADD`). COPY ranges must be monotonic so the launcher can derive baseline-relative edit ranges safely.
+
+For every skipped/replaced baseline range the launcher derives the exact expected original bytes from the captured clean baseline. The complete baseline must already match the SHA-256 stored in the delta header, so the launcher never applies this format blindly to an unknown game version.
+
+The standalone output size and SHA-256 from the header are verified before any game file is committed.
+
+### JACKOB_BINARY_DELTA_V1 — fixed-length JSON hunks
+
+The previous fixed-length JSON form remains supported:
 
 ```json
 {
   "format": "JACKOB_BINARY_DELTA_V1",
-  "expectedSha256": "64-hex-character SHA-256 of the clean baseline",
-  "resultingSha256": "64-hex-character SHA-256 after this delta is applied to the clean baseline",
+  "expectedSha256": "64 hex characters",
+  "resultingSha256": "64 hex characters",
   "patches": [
     {
       "offset": 1234,
@@ -156,25 +206,23 @@ Delta format:
 }
 ```
 
-Rules:
+In this encoding `expected` and `replacement` must have equal length. Every hunk is checked against the clean baseline.
 
-- `expectedSha256` is mandatory, either in the delta JSON or as `expectedSha256` on the manifest operation.
-- `resultingSha256` is mandatory, either in the delta JSON or as `resultingSha256` on the manifest operation.
-- `expected` and `replacement` are hexadecimal byte strings and must have equal length in binary-delta v1.
-- The baseline SHA-256 must match before the delta is accepted.
-- Every hunk verifies its `expected` bytes before writing replacement bytes.
-- The declared `resultingSha256` is verified by applying the delta to the captured clean baseline.
-- When several mods patch the same target, hunks are also checked against the current rebuild result. Conflicting changes abort safely.
+### Multiple binary mods on one target
 
-If the target no longer matches the supported game version, the launcher stops with an error such as:
+Binary changes are tracked in clean-baseline coordinates rather than current-output offsets. Therefore an earlier variable-length edit does not silently shift the offsets used by a later mod.
+
+Non-overlapping baseline edits can be composed. Overlapping edits are treated as a mod conflict and abort before commit. Identical edits are idempotent.
+
+If a target has already been transformed by an arbitrary non-binary operation such as `externalReplaceFile` or `externalXmlMerge`, a later baseline-relative binary delta is rejected rather than guessed.
+
+If the clean target no longer matches the supported game version, the launcher stops with:
 
 ```text
 Unsupported game version — target file has changed. This mod needs an update.
 ```
 
-The launcher never blindly writes a binary patch.
-
-### externalXmlMerge
+## externalXmlMerge
 
 Semantically merges selected nodes into any XML file outside `res.pak`.
 
@@ -187,7 +235,7 @@ Semantically merges selected nodes into any XML file outside `res.pak`.
 }
 ```
 
-It uses `JACKOB_XML_PATCH_V1`. The original localization-style `sheet` + `id` node form remains supported. For arbitrary XML files, a node may instead use XPath:
+It uses `JACKOB_XML_PATCH_V1`. The localization-style `sheet` + `id` form remains supported. For arbitrary XML a node may instead use XPath:
 
 ```json
 {
@@ -202,9 +250,9 @@ It uses `JACKOB_XML_PATCH_V1`. The original localization-style `sheet` + `id` no
 }
 ```
 
-If `xpath` finds a node, that node is replaced semantically. If it does not exist, `parentXPath` identifies where the new node is appended. Only specified nodes are changed; the entire vanilla XML does not need to be distributed.
+If `xpath` finds a node, that node is replaced. If it is missing, `parentXPath` identifies where the new node is appended. Only specified nodes are changed; a complete vanilla XML does not need to be distributed.
 
-### externalReplaceFile
+## externalReplaceFile
 
 Safely replaces an ordinary file outside `res.pak`.
 
@@ -218,20 +266,18 @@ Safely replaces an ordinary file outside `res.pak`.
 }
 ```
 
-The target may be any ordinary game file type (`.json`, `.prefab`, `.png`, `.dat`, `.hx`, etc.). The launcher does not hardcode file names or extensions.
+The target may be any ordinary game file type such as `.json`, `.prefab`, `.png`, `.dat` or `.hx`. Names and extensions are not hardcoded.
 
-If `expectedSha256` is provided, the captured baseline must match it. If `resultingSha256` is provided, the package-owned replacement bytes must match it.
-
-A missing baseline file is supported for `externalReplaceFile`: the launcher records that the file originally did not exist and deletes the managed file again when restoring the baseline.
+A missing baseline file is supported for `externalReplaceFile`: the launcher records that the file originally did not exist and removes the managed file again when restoring vanilla.
 
 ## Transaction and safety model
 
-Before a rebuild, all package transformations are prepared in memory from captured baselines. External targets are snapshotted before commit. External files are written first, then the `res.pak` index is switched only after its replacement payloads are appended successfully.
+All package transformations are prepared from captured baselines before commit. External targets are snapshotted before writing. External files are written through temporary files. Managed `res.pak` entry payloads are appended before index pointers are switched.
 
-If a later step fails, the launcher attempts to restore the external snapshots and restore the previous managed `res.pak` entry bytes. State is saved only after post-write verification succeeds.
+If a later commit step fails, the launcher attempts to restore the external snapshots and the previous managed `res.pak` entry data. Launcher state is saved only after post-write verification succeeds.
 
-The launcher also verifies that managed files still match its last applied hashes before starting another install/update/uninstall. Unexpected game updates or edits therefore stop the operation instead of being overwritten.
+Before every install, update, uninstall or restore, managed files are checked against the last applied hashes. Unexpected game updates or edits stop the operation instead of being overwritten.
 
 ## Backwards compatibility
 
-Packages containing only `cdbPatch`, `xmlMerge`, and `replaceEntry` remain valid. They do not need `minimumLauncherVersion`.
+Packages containing only `cdbPatch`, `xmlMerge` and `replaceEntry` remain valid and do not need `minimumLauncherVersion`.
