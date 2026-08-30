@@ -11,6 +11,7 @@
     <Authors>JACKOBTHATSME</Authors>
     <Description>Offline universal Wartales mod manager with transactional PAK and external-file patching.</Description>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <ApplicationIcon>Assets\AppIcon\JACKOBs-Wartales-Mod-Launcher.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="LauncherCore.cs" />
