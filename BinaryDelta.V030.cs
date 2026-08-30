@@ -61,8 +61,6 @@ internal static partial class LauncherCore
         var existingEdits = current.BinaryEdits;
         if (existingEdits is null)
         {
-            // A non-binary operation may have transformed this target earlier in the rebuild.
-            // Binary offsets are baseline-relative, so composing with an arbitrary transformed file is unsafe.
             if (!current.Bytes.AsSpan().SequenceEqual(baseline))
                 throw new InvalidOperationException(
                     $"Binary delta conflict for {target}: the target was already transformed by a non-binary operation. " +
@@ -170,6 +168,7 @@ internal static partial class LauncherCore
                     var replacement = pendingAdd.ToArray();
                     edits.Add(new BinaryBaselineEdit(baselineCursor, expected, replacement));
                     pendingAdd.SetLength(0);
+                    pendingAdd.Position = 0;
                 }
 
                 standalone.Write(baseline, (int)offset, length);
