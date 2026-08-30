@@ -110,5 +110,14 @@ internal sealed class ManagedFileState
     public string LastAppliedHash { get; set; } = "";
 }
 
-internal sealed record ExternalWorkingFile(bool Exists, byte[] Bytes);
+internal sealed record BinaryBaselineEdit(long Offset, byte[] Expected, byte[] Replacement)
+{
+    public long End => Offset + Expected.LongLength;
+}
+
+internal sealed record ExternalWorkingFile(
+    bool Exists,
+    byte[] Bytes,
+    List<BinaryBaselineEdit>? BinaryEdits = null);
+
 internal sealed record ExternalSnapshot(bool Existed, string BackupPath);
