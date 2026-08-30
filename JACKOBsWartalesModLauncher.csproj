@@ -14,5 +14,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="LauncherCore.cs" />
+    <Compile Remove="LauncherCore.V030.cs" />
   </ItemGroup>
 </Project>
