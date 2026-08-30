@@ -7,9 +7,12 @@
     <Nullable>enable</Nullable>
     <AssemblyName>JACKOBsWartalesModLauncher</AssemblyName>
     <RootNamespace>JACKOBsWartalesModLauncher</RootNamespace>
-    <Version>0.2.2</Version>
+    <Version>0.3.0</Version>
     <Authors>JACKOBTHATSME</Authors>
-    <Description>Offline data-only Wartales mod launcher and patcher with a graphical interface.</Description>
+    <Description>Offline universal Wartales mod manager with transactional PAK and external-file patching.</Description>
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="LauncherCore.cs" />
+  </ItemGroup>
 </Project>
