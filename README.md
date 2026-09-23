@@ -10,6 +10,22 @@ Universal offline mod manager for compatible Wartales mod packages.
 
 Download the Windows `.exe` from the release assets.
 
+## v0.3.1 game-update recovery
+
+Launcher v0.3.1 fixes the stale-state lock that can happen when Wartales is updated while launcher-managed mods are installed.
+
+If the launcher detects that managed game files changed outside the launcher, it now stops before touching the game and offers a safe recovery path. Before accepting the reset:
+
+1. Close Wartales.
+2. In Steam open **Wartales → Properties → Installed Files → Verify integrity of game files** and let Steam finish.
+3. Start the launcher again.
+4. Accept the launcher-state recovery prompt.
+5. Install only mod versions that support the current Wartales patch.
+
+The recovery action does **not** rewrite `res.pak`, `hlboot.dat`, or any other Wartales game file. It archives the previous launcher state as a timestamped `.pre-update-*` backup and starts with a fresh launcher state so the next compatible mod can capture the current game baseline.
+
+Strict binary-delta SHA-256 checks remain enabled. Recovery does not make an outdated binary mod compatible with a new Wartales build.
+
 ## v0.3.0 goals
 
 Launcher v0.3.0 extends the existing package model beyond `res.pak`. A single mod can contain any number of operations and can modify both PAK entries and ordinary files in the Wartales directory.
