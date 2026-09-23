@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>JACKOBsWartalesModLauncher</AssemblyName>
     <RootNamespace>JACKOBsWartalesModLauncher</RootNamespace>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <Authors>JACKOBTHATSME</Authors>
     <Description>Offline universal Wartales mod manager with transactional PAK and external-file patching.</Description>
     <InvariantGlobalization>false</InvariantGlobalization>
