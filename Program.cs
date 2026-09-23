@@ -58,6 +58,8 @@ internal static class Program
         }
 
         var form = new MainForm();
+        ApplyAssemblyVersionToUi(form);
+
         try
         {
             var icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -69,5 +71,27 @@ internal static class Program
         }
 
         Application.Run(form);
+    }
+
+    private static void ApplyAssemblyVersionToUi(Control root)
+    {
+        var assemblyVersion = typeof(Program).Assembly.GetName().Version;
+        if (assemblyVersion is null) return;
+
+        var displayVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{Math.Max(0, assemblyVersion.Build)}";
+        var oldMarker = "v" + LauncherCore.LauncherVersion;
+        var newMarker = "v" + displayVersion;
+        if (oldMarker.Equals(newMarker, StringComparison.Ordinal)) return;
+
+        RewriteVersionText(root, oldMarker, newMarker);
+    }
+
+    private static void RewriteVersionText(Control control, string oldMarker, string newMarker)
+    {
+        if (!string.IsNullOrEmpty(control.Text) && control.Text.Contains(oldMarker, StringComparison.Ordinal))
+            control.Text = control.Text.Replace(oldMarker, newMarker, StringComparison.Ordinal);
+
+        foreach (Control child in control.Controls)
+            RewriteVersionText(child, oldMarker, newMarker);
     }
 }
